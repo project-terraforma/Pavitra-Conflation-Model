@@ -2,9 +2,11 @@
 Pavitra Vivekanandan
 
 I will be working on Project C.
+Compare small language model with performance of current matcher for place conflation and provide comparative analysis of improvement.
 
-Analyze datasets from Overture using language models
 
 time cost
+
 f1
+
 precision
