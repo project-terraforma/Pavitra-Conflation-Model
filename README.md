@@ -165,5 +165,5 @@ This project is part of Project C evaluation framework for place conflation mode
 
 ---
 
-**Last Updated**: January 2025  
+**Last Updated**: October 2025  
 **Status**: 95% OKR completion (Speed ✅, Cost ✅, F1 in progress)
