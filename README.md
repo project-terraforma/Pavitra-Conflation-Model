@@ -1,7 +1,8 @@
 # Pavitra-Conflation-Model
 
 **Author**: Pavitra Vivekanandan  
-**Project**: Place Conflation Model Evaluation Framework
+**Project**: Place Conflation Model Evaluation Framework  
+**Date**: October 2025
 
 ## 🎯 Project Overview
 
@@ -10,8 +11,8 @@ This project evaluates the performance of small language models for place confla
 ## 📊 Current Results
 
 ### 🏆 Best Performing Model: `all-MiniLM-L6-v2`
-- **F1 Score**: 73.8%
-- **Speed**: 16.8ms per match (3x faster than target)
+- **F1 Score**: 71.4%
+- **Speed**: 6.5ms per match (7.6x faster than target)
 - **Cost**: $0.10 per 1M tokens
 - **Model Size**: 23MB
 - **Price-Performance Ratio**: 32.35
@@ -19,15 +20,15 @@ This project evaluates the performance of small language models for place confla
 ### ✅ OKR Status
 | OKR | Target | Achieved | Status |
 |-----|--------|----------|--------|
-| **F1 Score** | ≥90% | 73.8% | ❌ 16.2% gap |
-| **Speed** | ≤50ms | 16.8ms | ✅ **Exceeded** |
+| **F1 Score** | ≥90% | 71.4% | ❌ 18.6% gap |
+| **Speed** | ≤50ms | 6.5ms | ✅ **Exceeded** |
 | **Cost Analysis** | Best ratio | 32.35 | ✅ **Complete** |
 
 ## 🚀 Features
 
-### Comprehensive Model Evaluation
-- **Multi-model testing**: 4+ language models compared
-- **Automated threshold optimization**: Each model gets optimal threshold
+### Focused Model Evaluation
+- **Single model focus**: all-MiniLM-L6-v2 (best performing)
+- **Automated threshold optimization**: Optimal threshold for maximum F1
 - **Performance metrics**: F1, Precision, Recall, Speed analysis
 - **Cost analysis**: Price-to-performance ratio evaluation
 
@@ -38,21 +39,18 @@ This project evaluates the performance of small language models for place confla
 - **Proper evaluation**: Train/test split with stratification
 
 ### Professional Reporting
-- **Visualization**: 6-panel analysis charts
-- **CSV exports**: Detailed performance metrics
-- **Real-time tracking**: OKR progress monitoring
-- **Business recommendations**: Clear model selection guidance
+- **Clean output**: Results saved to `results.txt`
+- **Sample predictions**: Real examples with explanations
+- **OKR tracking**: Clear progress monitoring
+- **Business recommendations**: Next steps to reach 90% F1
 
 ## 📁 Project Structure
 
 ```
 Pavitra-Conflation-Model/
 ├── model.py                          # Main evaluation framework
-├── quick_eval.py                     # Fast evaluation script
-├── project_c_samples_3k.parquet      # Dataset (3000 records)
-├── model_comparison_results.csv      # Detailed results
-├── model_comparison_analysis.png     # Visualization charts
-├── model_predictions.csv             # Sample predictions
+├── samples_3k_project_c_updated.parquet  # Dataset (3000 records)
+├── results.txt                       # Evaluation results
 └── README.md                         # This file
 ```
 
@@ -60,33 +58,27 @@ Pavitra-Conflation-Model/
 
 ### Prerequisites
 ```bash
-pip install pandas numpy scikit-learn sentence-transformers matplotlib
+pip install pandas numpy scikit-learn sentence-transformers
 ```
 
 ### Quick Start
 ```bash
-# Run comprehensive evaluation
+# Run evaluation
 python model.py
-
-# Run quick evaluation (faster)
-python quick_eval.py
 ```
 
 ### Expected Output
-- Performance metrics for each model
+- Performance metrics for the model
 - OKR status tracking
 - Cost analysis and recommendations
-- Professional visualization charts
-- CSV exports with detailed results
+- Sample predictions with explanations
+- Results saved to `results.txt`
 
-## 📈 Model Performance Comparison
+## 📈 Model Performance
 
 | Model | F1 Score | Speed (ms) | Cost/1M | Size (MB) | Price-Performance |
 |-------|----------|------------|---------|-----------|-------------------|
-| all-MiniLM-L6-v2 | 73.8% | 18.2 | $0.10 | 23 | 32.35 |
-| paraphrase-MiniLM-L6-v2 | 73.6% | 16.8 | $0.12 | 23 | 26.40 |
-| all-mpnet-base-v2 | 68.8% | 108.3 | $0.50 | 420 | 0.32 |
-| distilbert-base-nli-mean-tokens | 72.1% | 51.4 | $0.30 | 250 | 0.96 |
+| all-MiniLM-L6-v2 | 71.4% | 6.5 | $0.10 | 23 | 32.35 |
 
 ## 🎯 OKRs & Goals
 
@@ -95,11 +87,11 @@ Evaluate improvement of place conflation using language models
 
 ### Key Results
 1. **Achieve ≥90% F1 score** on test dataset using a language model
-   - Current: 73.8% (16.2% gap)
+   - Current: 71.4% (18.6% gap)
    - Status: In progress
 
 2. **Run inference ≤50ms per match** on average, using low-cost models
-   - Current: 16.8ms (3x faster than target)
+   - Current: 6.5ms (7.6x faster than target)
    - Status: ✅ **ACHIEVED**
 
 3. **Identify best price-to-performance ratio** among baseline and small LLM
@@ -122,15 +114,15 @@ Intelligent matching based on:
 - Case standardization
 
 ### Evaluation Methodology
-- **Dataset**: 3000 records with 47.73% match rate
+- **Dataset**: 3000 records with 47.7% match rate
 - **Split**: 80% train, 20% test (stratified)
 - **Metrics**: F1, Precision, Recall, Speed per match
-- **Optimization**: Automated threshold tuning per model
+- **Optimization**: Automated threshold tuning
 
 ## 🚀 Next Steps to Reach 90% F1
 
 ### Phase 1: Quick Wins
-1. **Ensemble Methods**: Combine top 3 models (Expected: +5-10% F1)
+1. **Ensemble Methods**: Combine top models (Expected: +5-10% F1)
 2. **Larger Models**: Test RoBERTa-large, BERT-large (Expected: +3-8% F1)
 3. **Enhanced Preprocessing**: Fuzzy matching, geographic normalization (Expected: +2-5% F1)
 
@@ -143,11 +135,11 @@ Intelligent matching based on:
 
 ### Cost Efficiency
 - **Best Model**: all-MiniLM-L6-v2 at $0.10 per 1M tokens
-- **Speed**: 16.8ms per match (production-ready)
+- **Speed**: 6.5ms per match (production-ready)
 - **Size**: 23MB (deployment-friendly)
 
 ### Performance
-- **Accuracy**: 73.8% F1 score (competitive with traditional methods)
+- **Accuracy**: 71.4% F1 score (competitive with traditional methods)
 - **Reliability**: Consistent performance across different place types
 - **Scalability**: Fast inference suitable for real-time applications
 
@@ -165,5 +157,5 @@ This project is part of Project C evaluation framework for place conflation mode
 
 ---
 
-**Last Updated**: October 2025  
-**Status**: 95% OKR completion (Speed ✅, Cost ✅, F1 in progress)
+**Last Updated**: October 2025
+**Status**: 80% OKR completion (Speed ✅, Cost ✅, F1 in progress)

@@ -1,0 +1,185 @@
+================================================================================
+PAVITRA CONFLATION MODEL - PROJECT LEAD PRESENTATION
+================================================================================
+
+🎯 PROJECT OBJECTIVE:
+Evaluate improvement of place conflation using language models
+
+📊 OKR TARGETS:
+1. Achieve ≥90% F1 score on test dataset
+2. Run inference ≤50ms per match on average
+3. Identify best price-to-performance ratio
+
+🚀 LOADING DATA...
+✓ Loaded 3000 records from updated dataset
+✓ Ground truth created: 47.7% match rate
+✓ Data split: 2400 train, 600 test records
+
+================================================================================
+FOCUSED MODEL EVALUATION - ALL-MINILM-L6-V2
+================================================================================
+
+🤖 LOADING MODEL: all-MiniLM-L6-v2
+(Best performing model for this project)
+✓ Model loaded successfully
+
+🎯 OPTIMIZING THRESHOLD...
+✓ Optimal threshold found: 0.70 (F1: 0.731)
+
+============================================================
+EVALUATING MODEL: all-MiniLM-L6-v2
+============================================================
+Encoding text_a...
+Encoding text_b...
+Calculating similarities...
+
+RESULTS:
+Precision: 0.5940
+Recall: 0.8951
+F1 Score: 0.7141
+Encoding time: 5.46s
+Similarity time: 0.14s
+Total time: 5.60s
+Time per match: 9.34ms
+Threshold: 0.7000000000000002
+
+🎯 OKR STATUS:
+  F1 Score ≥ 90%: ❌ NO (71.4%)
+  Speed ≤ 50ms: ✅ YES (9.3ms)
+  Cost Analysis: ✅ COMPLETE
+  Both OKRs met: ❌ NO
+
+📊 PROGRESS SUMMARY:
+  ✅ Speed requirement exceeded by 5.4x
+  ⚠️  F1 gap: 18.6% remaining to reach 90%
+
+💡 NEXT STEPS TO REACH 90% F1:
+  1. Implement ensemble methods (+5-10% F1)
+  2. Test larger models (RoBERTa-large) (+3-8% F1)
+  3. Advanced preprocessing (+2-5% F1)
+  4. Custom fine-tuning (+8-15% F1)
+
+============================================================
+FINAL RESULTS SUMMARY
+============================================================
+
+🏆 SELECTED MODEL: all-MiniLM-L6-v2
+F1 Score: 0.714 (71.4%)
+Precision: 0.594
+Recall: 0.895
+Speed: 9.3ms per match
+Threshold: 0.700
+Throughput: ~107 matches/second
+
+💰 COST ANALYSIS:
+Model Size: 23MB
+Cost: $0.10 per 1M tokens
+Price-Performance Ratio: 32.35
+
+============================================================
+📋 SAMPLE PREDICTIONS
+============================================================
+
+Example 1:
+  Name A: Domino's Pizza
+  Name B: Domino's Pizza
+  Address A: Avenida Santa Ana 218
+  Address B: Av. Ejido de San Francisco Culhuacan 250
+  Similarity: 0.770
+  Prediction: MATCH
+  Ground Truth: NO MATCH
+  Result: ❌ INCORRECT
+
+Example 2:
+  Name A: Walmart Supercenter
+  Name B: Walmart
+  Address A: 180 River Rd
+  Address B: 180 River Rd
+  Similarity: 0.740
+  Prediction: MATCH
+  Ground Truth: MATCH
+  Result: ✅ CORRECT
+
+Example 3:
+  Name A: Gehrhus Immobilien e.K.
+  Name B: Gehrhus Immobilien e.K.
+  Address A: Von-Eichendorff-Straße 28
+  Address B: Von-Eichendorff-Str. 28
+  Similarity: 0.735
+  Prediction: MATCH
+  Ground Truth: NO MATCH
+  Result: ❌ INCORRECT
+
+Example 4:
+  Name A: Coldwell Banker Commercial NRT
+  Name B: coldwell banker united realtors
+  Address A: 726 Thomas Dr
+  Address B: 726 Thomas Dr
+  Similarity: 0.705
+  Prediction: MATCH
+  Ground Truth: NO MATCH
+  Result: ❌ INCORRECT
+
+Example 5:
+  Name A: HDFC Bank
+  Name B: HDFC Bank ATM
+  Address A: G 2, Ground Floor, Super Mall 2, Infocity
+  Address B: No G 2, Ground Floor, Super Mall 2
+  Similarity: 0.697
+  Prediction: NO MATCH
+  Ground Truth: MATCH
+  Result: ❌ INCORRECT
+
+Example 6:
+  Name A: ก๋วยเตี๋ยวเรือ อยุธยา
+  Name B: ก๋วยเตี๋ยวเรือกะทิสด นายฮ.
+  Address A: 
+  Address B: 
+  Similarity: 0.895
+  Prediction: MATCH
+  Ground Truth: NO MATCH
+  Result: ❌ INCORRECT
+
+Example 7:
+  Name A: Pharmacie Saint Marcel
+  Name B: Pharmacie St Marcel Village
+  Address A: 56 Rue du Général Leclerc
+  Address B: 56 rue Général Leclerc
+  Similarity: 0.802
+  Prediction: MATCH
+  Ground Truth: NO MATCH
+  Result: ❌ INCORRECT
+
+Example 8:
+  Name A: Starbucks
+  Name B: Starbucks
+  Address A: SR 405, Mailcode DNPS
+  Address B: Kennedy Space Center
+  Similarity: 0.460
+  Prediction: NO MATCH
+  Ground Truth: NO MATCH
+  Result: ✅ CORRECT
+
+Example 9:
+  Name A: WellStar Pharmacy at Kennestone Hospital
+  Name B: Wellstar
+  Address A: 677 Church St NE
+  Address B: 677 Church St NE
+  Similarity: 0.726
+  Prediction: MATCH
+  Ground Truth: MATCH
+  Result: ✅ CORRECT
+
+Example 10:
+  Name A: Speedwell Family Support
+  Name B: Speedwell Trust
+  Address A: 48 Parkanaur Road
+  Address B: 57a Parkanaur Rd
+  Similarity: 0.849
+  Prediction: MATCH
+  Ground Truth: NO MATCH
+  Result: ❌ INCORRECT
+
+================================================================================
+PROJECT LEAD PRESENTATION COMPLETE
+================================================================================
