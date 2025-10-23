@@ -11,16 +11,16 @@ This project evaluates the performance of small language models for place confla
 ## 📊 Current Results
 
 ### 🏆 Best Performing Model: `all-MiniLM-L6-v2`
-- **F1 Score**: 71.4%
-- **Speed**: 6.5ms per match (7.6x faster than target)
+- **F1 Score**: 72.5%
+- **Speed**: 6.5ms per match (7.7x faster than target)
 - **Cost**: $0.10 per 1M tokens
-- **Model Size**: 23MB
+- **Model Size**: 22MB
 - **Price-Performance Ratio**: 32.35
 
 ### ✅ OKR Status
 | OKR | Target | Achieved | Status |
 |-----|--------|----------|--------|
-| **F1 Score** | ≥90% | 71.4% | ❌ 18.6% gap |
+| **F1 Score** | ≥90% | 72.5% | ❌ 17.5% gap |
 | **Speed** | ≤50ms | 6.5ms | ✅ **Exceeded** |
 | **Cost Analysis** | Best ratio | 32.35 | ✅ **Complete** |
 
@@ -51,7 +51,8 @@ Pavitra-Conflation-Model/
 ├── model.py                          # Main evaluation framework
 ├── samples_3k_project_c_updated.parquet  # Dataset (3000 records)
 ├── results.txt                       # Evaluation results
-└── README.md                         # This file
+├── README.md                         # This file
+└── LICENSE                           # Project license
 ```
 
 ## 🛠️ Installation & Usage
@@ -78,7 +79,7 @@ python model.py
 
 | Model | F1 Score | Speed (ms) | Cost/1M | Size (MB) | Price-Performance |
 |-------|----------|------------|---------|-----------|-------------------|
-| all-MiniLM-L6-v2 | 71.4% | 6.5 | $0.10 | 23 | 32.35 |
+| all-MiniLM-L6-v2 | 72.5% | 6.5 | $0.10 | 22 | 32.35 |
 
 ## 🎯 OKRs & Goals
 
@@ -87,11 +88,11 @@ Evaluate improvement of place conflation using language models
 
 ### Key Results
 1. **Achieve ≥90% F1 score** on test dataset using a language model
-   - Current: 71.4% (18.6% gap)
+   - Current: 72.5% (17.5% gap)
    - Status: In progress
 
 2. **Run inference ≤50ms per match** on average, using low-cost models
-   - Current: 6.5ms (7.6x faster than target)
+   - Current: 6.5ms (7.7x faster than target)
    - Status: ✅ **ACHIEVED**
 
 3. **Identify best price-to-performance ratio** among baseline and small LLM
@@ -136,10 +137,10 @@ Intelligent matching based on:
 ### Cost Efficiency
 - **Best Model**: all-MiniLM-L6-v2 at $0.10 per 1M tokens
 - **Speed**: 6.5ms per match (production-ready)
-- **Size**: 23MB (deployment-friendly)
+- **Size**: 22MB (deployment-friendly)
 
 ### Performance
-- **Accuracy**: 71.4% F1 score (competitive with traditional methods)
+- **Accuracy**: 72.5% F1 score (competitive with traditional methods)
 - **Reliability**: Consistent performance across different place types
 - **Scalability**: Fast inference suitable for real-time applications
 
