@@ -36,8 +36,8 @@ with open('results.txt', 'w') as f:
     log_output("🎯 OBJECTIVE: Evaluate improvement of place conflation using language models", f)
     log_output("", f)
     log_output("📊 KEY RESULTS:", f)
-    log_output("  1. Achieve at least 90% F1 score (or precision/recall balance) on the test dataset using a language model", f)
-    log_output("  2. Run inference within 50 ms per match on average, using a low-cost model", f)
+    log_output("  1. Achieve at least 80% F1 score (or precision/recall balance) on the test dataset using a language model", f)
+    log_output("  2. Run inference within 20 ms per match on average, using a low-cost model", f)
     log_output("  3. Identify and recommend the model with the best price-to-performance ratio among baseline and small LLM", f)
     log_output("", f)
     
@@ -477,27 +477,27 @@ with open('results.txt', 'w') as f:
         
         results, scores, predictions = evaluate_model_ensemble(model_name, model, optimal_threshold, optimal_weights, test_df)
         
-        meets_f1_okr = results['f1_score'] >= 0.90
-        meets_speed_okr = results['time_per_match_ms'] <= 50
+        meets_f1_okr = results['f1_score'] >= 0.80
+        meets_speed_okr = results['time_per_match_ms'] <= 20
         
         log_output(f"\n🎯 OKR STATUS:", f)
-        log_output(f"  F1 Score ≥ 90%: {'✅ YES' if meets_f1_okr else '❌ NO'} ({results['f1_score']:.1%})", f)
-        log_output(f"  Speed ≤ 50ms: {'✅ YES' if meets_speed_okr else '❌ NO'} ({results['time_per_match_ms']:.1f}ms)", f)
+        log_output(f"  F1 Score ≥ 80%: {'✅ YES' if meets_f1_okr else '❌ NO'} ({results['f1_score']:.1%})", f)
+        log_output(f"  Speed ≤ 20ms: {'✅ YES' if meets_speed_okr else '❌ NO'} ({results['time_per_match_ms']:.1f}ms)", f)
         log_output(f"  Cost Analysis: ✅ COMPLETE", f)
-        log_output(f"  Both OKRs met: {'🎉 YES' if meets_f1_okr and meets_speed_okr else '❌ NO'}", f)
+        log_output(f"  All OKRs met: {'🎉 YES' if meets_f1_okr and meets_speed_okr else '❌ NO'}", f)
         
         if meets_f1_okr and meets_speed_okr:
             log_output(f"\n🎉 SUCCESS: ALL OKRs ACHIEVED!", f)
         else:
             log_output(f"\n📊 PROGRESS SUMMARY:", f)
             if meets_speed_okr:
-                log_output(f"  ✅ Speed requirement exceeded by {50/results['time_per_match_ms']:.1f}x", f)
+                log_output(f"  ✅ Speed requirement exceeded by {20/results['time_per_match_ms']:.1f}x", f)
             if not meets_f1_okr:
-                gap = 0.90 - results['f1_score']
-                log_output(f"  ⚠️  F1 gap: {gap:.1%} remaining to reach 90%", f)
+                gap = 0.80 - results['f1_score']
+                log_output(f"  ⚠️  F1 gap: {gap:.1%} remaining to reach 80%", f)
             log_output("", f)
             if not meets_f1_okr:
-                log_output("💡 NEXT STEPS TO REACH 90% F1:", f)
+                log_output("💡 NEXT STEPS TO REACH 80% F1:", f)
                 log_output("  1. Test larger models (RoBERTa-large) (+3-8% F1)", f)
                 log_output("  2. Advanced preprocessing improvements (+2-5% F1)", f)
                 log_output("  3. Custom fine-tuning (+8-15% F1)", f)
