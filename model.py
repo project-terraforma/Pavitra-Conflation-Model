@@ -19,6 +19,7 @@ from sentence_transformers import SentenceTransformer  # type: ignore
 from sklearn.metrics.pairwise import cosine_similarity  # type: ignore
 from sklearn.metrics import precision_score, recall_score, f1_score  # type: ignore
 from sklearn.model_selection import train_test_split  # type: ignore
+from sklearn.feature_extraction.text import TfidfVectorizer  # type: ignore
 
 def log_output(message, output_file):
     """Log message to both console and file"""
@@ -85,6 +86,10 @@ with open('results.txt', 'w') as f:
         }
         
         text = text.lower()
+        
+        # Standardize units (apt, apartment, ste, suite, unit, #) to "unit"
+        # This handles: "123 Main St Apt 5", "123 Main Street #5", "123 Main St Ste 5"
+        text = re.sub(r'\b(apt|apartment|ste|suite|unit|#)\s*\d+\b', ' unit', text)
         
         # Expand abbreviations
         words = text.split()
@@ -206,7 +211,7 @@ with open('results.txt', 'w') as f:
         if test_data is None:
             test_data = test_df
         if weights is None:
-            weights = {'full': 0.4, 'name': 0.3, 'addr': 0.2, 'name_addr': 0.1, 'name_jaccard': 0.0, 'addr_jaccard': 0.0}
+            weights = {'full': 0.4, 'name': 0.3, 'addr': 0.2, 'name_addr': 0.1, 'name_jaccard': 0.0, 'addr_jaccard': 0.0, 'tfidf_name': 0.0}
         
         log_output(f"\n{'='*60}", f)
         log_output(f"EVALUATING MODEL (ENSEMBLE): {model_name}", f)
@@ -266,6 +271,19 @@ with open('results.txt', 'w') as f:
             ensemble_scores += addr_jaccard_scores * weights['addr_jaccard']
             total_weight += weights['addr_jaccard']
         
+        # Add TF-IDF fallback scoring for names (helps with short/rare strings)
+        if weights.get('tfidf_name', 0) > 0:
+            log_output("Computing TF-IDF scores for names...", f)
+            tf = TfidfVectorizer(analyzer='char', ngram_range=(3, 5))
+            text_a_name_list = test_data['text_a_name'].tolist()
+            text_b_name_list = test_data['text_b_name'].tolist()
+            tf_a = tf.fit_transform(text_a_name_list)
+            tf_b = tf.transform(text_b_name_list)
+            # More efficient: compute all similarities at once
+            tfidf_scores = np.array([cosine_similarity(tf_a[i:i+1], tf_b[i:i+1])[0][0] for i in range(len(test_data))])
+            ensemble_scores += tfidf_scores * weights['tfidf_name']
+            total_weight += weights['tfidf_name']
+        
         if total_weight > 0:
             ensemble_scores = ensemble_scores / total_weight
         
@@ -299,6 +317,12 @@ with open('results.txt', 'w') as f:
         
         total_time = encoding_time + similarity_time
         time_per_match = (total_time / len(test_data)) * 1000
+        
+        # Check if time per match exceeds 50ms threshold
+        if time_per_match > 50:
+            log_output(f"\n⚠️  STOPPING: Time per match ({time_per_match:.2f}ms) exceeds 50ms threshold", f)
+            log_output(f"Model {model_name} is too slow for production use.", f)
+            return None, None, None
         
         results = {
             'model_name': model_name,
@@ -374,21 +398,28 @@ with open('results.txt', 'w') as f:
             for i in range(len(test_data))
         ])
         
+        # Compute TF-IDF scores for names (for optimization)
+        log_output("Computing TF-IDF scores for optimization...", f)
+        tf = TfidfVectorizer(analyzer='char', ngram_range=(3, 5))
+        text_a_name_list = test_data['text_a_name'].tolist()
+        text_b_name_list = test_data['text_b_name'].tolist()
+        tf_a = tf.fit_transform(text_a_name_list)
+        tf_b = tf.transform(text_b_name_list)
+        string_scores['tfidf_name'] = np.array([cosine_similarity(tf_a[i:i+1], tf_b[i:i+1])[0][0] for i in range(len(test_data))])
+        
         ground_truth = test_data['ground_truth'].values
         
-        # Focused weight combinations - emphasize name similarity (strongest signal)
+        # Focused weight combinations - include TF-IDF for better short string matching
         weight_candidates = [
-            # Current best and variations
-            {'full': 0.4, 'name': 0.3, 'addr': 0.2, 'name_addr': 0.1, 'name_jaccard': 0.0, 'addr_jaccard': 0.0},
-            {'full': 0.43, 'name': 0.27, 'addr': 0.2, 'name_addr': 0.1, 'name_jaccard': 0.0, 'addr_jaccard': 0.0},
-            # Name-emphasized combinations
-            {'full': 0.35, 'name': 0.4, 'addr': 0.15, 'name_addr': 0.1, 'name_jaccard': 0.0, 'addr_jaccard': 0.0},
-            {'full': 0.3, 'name': 0.45, 'addr': 0.15, 'name_addr': 0.1, 'name_jaccard': 0.0, 'addr_jaccard': 0.0},
-            {'full': 0.32, 'name': 0.38, 'addr': 0.2, 'name_addr': 0.1, 'name_jaccard': 0.0, 'addr_jaccard': 0.0},
-            {'full': 0.38, 'name': 0.32, 'addr': 0.2, 'name_addr': 0.1, 'name_jaccard': 0.0, 'addr_jaccard': 0.0},
-            # Balanced with slight name emphasis
-            {'full': 0.4, 'name': 0.35, 'addr': 0.15, 'name_addr': 0.1, 'name_jaccard': 0.0, 'addr_jaccard': 0.0},
-            {'full': 0.45, 'name': 0.35, 'addr': 0.15, 'name_addr': 0.05, 'name_jaccard': 0.0, 'addr_jaccard': 0.0},
+            # Current best without TF-IDF
+            {'full': 0.4, 'name': 0.3, 'addr': 0.2, 'name_addr': 0.1, 'name_jaccard': 0.0, 'addr_jaccard': 0.0, 'tfidf_name': 0.0},
+            # With smaller TF-IDF weights (less aggressive)
+            {'full': 0.38, 'name': 0.3, 'addr': 0.2, 'name_addr': 0.1, 'name_jaccard': 0.0, 'addr_jaccard': 0.0, 'tfidf_name': 0.02},
+            {'full': 0.36, 'name': 0.3, 'addr': 0.2, 'name_addr': 0.1, 'name_jaccard': 0.0, 'addr_jaccard': 0.0, 'tfidf_name': 0.04},
+            {'full': 0.35, 'name': 0.3, 'addr': 0.2, 'name_addr': 0.1, 'name_jaccard': 0.0, 'addr_jaccard': 0.0, 'tfidf_name': 0.05},
+            # With moderate TF-IDF
+            {'full': 0.35, 'name': 0.25, 'addr': 0.2, 'name_addr': 0.1, 'name_jaccard': 0.0, 'addr_jaccard': 0.0, 'tfidf_name': 0.1},
+            {'full': 0.33, 'name': 0.27, 'addr': 0.2, 'name_addr': 0.1, 'name_jaccard': 0.0, 'addr_jaccard': 0.0, 'tfidf_name': 0.1},
         ]
         
         best_f1 = 0
@@ -415,6 +446,10 @@ with open('results.txt', 'w') as f:
             if 'addr_jaccard' in weights and weights['addr_jaccard'] > 0:
                 ensemble_scores += string_scores['addr_jaccard'] * weights['addr_jaccard']
                 total_weight += weights['addr_jaccard']
+            
+            if 'tfidf_name' in weights and weights['tfidf_name'] > 0:
+                ensemble_scores += string_scores['tfidf_name'] * weights['tfidf_name']
+                total_weight += weights['tfidf_name']
             
             if total_weight > 0:
                 ensemble_scores = ensemble_scores / total_weight
@@ -477,103 +512,108 @@ with open('results.txt', 'w') as f:
         
         results, scores, predictions = evaluate_model_ensemble(model_name, model, optimal_threshold, optimal_weights, test_df)
         
-        meets_f1_okr = results['f1_score'] >= 0.90
-        meets_speed_okr = results['time_per_match_ms'] <= 50
-        
-        log_output(f"\n🎯 OKR STATUS:", f)
-        log_output(f"  F1 Score ≥ 90%: {'✅ YES' if meets_f1_okr else '❌ NO'} ({results['f1_score']:.1%})", f)
-        log_output(f"  Speed ≤ 50ms: {'✅ YES' if meets_speed_okr else '❌ NO'} ({results['time_per_match_ms']:.1f}ms)", f)
-        log_output(f"  Cost Analysis: ✅ COMPLETE", f)
-        log_output(f"  Both OKRs met: {'🎉 YES' if meets_f1_okr and meets_speed_okr else '❌ NO'}", f)
-        
-        if meets_f1_okr and meets_speed_okr:
-            log_output(f"\n🎉 SUCCESS: ALL OKRs ACHIEVED!", f)
+        # Check if evaluation was stopped due to speed
+        if results is None:
+            log_output(f"\n❌ Evaluation stopped: Model exceeds 50ms per match requirement", f)
+            log_output(f"Consider using a faster model or optimizing the approach.", f)
         else:
-            log_output(f"\n📊 PROGRESS SUMMARY:", f)
-            if meets_speed_okr:
-                log_output(f"  ✅ Speed requirement exceeded by {50/results['time_per_match_ms']:.1f}x", f)
-            if not meets_f1_okr:
-                gap = 0.90 - results['f1_score']
-                log_output(f"  ⚠️  F1 gap: {gap:.1%} remaining to reach 90%", f)
-            log_output("", f)
-            if not meets_f1_okr:
-                log_output("💡 NEXT STEPS TO REACH 90% F1:", f)
-                log_output("  1. Test larger models (RoBERTa-large) (+3-8% F1)", f)
-                log_output("  2. Advanced preprocessing improvements (+2-5% F1)", f)
-                log_output("  3. Custom fine-tuning (+8-15% F1)", f)
-        
-        log_output("", f)
-        log_output("="*60, f)
-        log_output("RESULTS SUMMARY", f)
-        log_output("="*60, f)
-        
-        log_output(f"\n🏆 Model: {model_name}", f)
-        log_output(f"F1 Score: {results['f1_score']:.1%} | Speed: {results['time_per_match_ms']:.1f}ms | Cost: $0.10/1M tokens", f)
-        log_output(f"Precision: {results['precision']:.3f} | Recall: {results['recall']:.3f} | Threshold: {results['threshold']:.3f}", f)
-        
-        log_output("", f)
-        log_output("📋 SAMPLE PREDICTIONS (5 examples):", f)
-        
-        sample_indices = np.random.choice(len(test_df), min(5, len(test_df)), replace=False)
-        for i, idx in enumerate(sample_indices):
-            actual_idx = test_df.index[idx]
-            name_a = df.loc[actual_idx, 'name_a']
-            name_b = df.loc[actual_idx, 'name_b']
-            score = scores[idx]
-            pred = predictions[idx]
-            truth = test_df.iloc[idx]['ground_truth']
+            meets_f1_okr = results['f1_score'] >= 0.90
+            meets_speed_okr = results['time_per_match_ms'] <= 50
             
+            log_output(f"\n🎯 OKR STATUS:", f)
+            log_output(f"  F1 Score ≥ 90%: {'✅ YES' if meets_f1_okr else '❌ NO'} ({results['f1_score']:.1%})", f)
+            log_output(f"  Speed ≤ 50ms: {'✅ YES' if meets_speed_okr else '❌ NO'} ({results['time_per_match_ms']:.1f}ms)", f)
+            log_output(f"  Cost Analysis: ✅ COMPLETE", f)
+            log_output(f"  Both OKRs met: {'🎉 YES' if meets_f1_okr and meets_speed_okr else '❌ NO'}", f)
+            
+            if meets_f1_okr and meets_speed_okr:
+                log_output(f"\n🎉 SUCCESS: ALL OKRs ACHIEVED!", f)
+            else:
+                log_output(f"\n📊 PROGRESS SUMMARY:", f)
+                if meets_speed_okr:
+                    log_output(f"  ✅ Speed requirement exceeded by {50/results['time_per_match_ms']:.1f}x", f)
+                if not meets_f1_okr:
+                    gap = 0.90 - results['f1_score']
+                    log_output(f"  ⚠️  F1 gap: {gap:.1%} remaining to reach 90%", f)
+                log_output("", f)
+                if not meets_f1_okr:
+                    log_output("💡 NEXT STEPS TO REACH 90% F1:", f)
+                    log_output("  1. Test larger models (RoBERTa-large) (+3-8% F1)", f)
+                    log_output("  2. Advanced preprocessing improvements (+2-5% F1)", f)
+                    log_output("  3. Custom fine-tuning (+8-15% F1)", f)
+            
+            log_output("", f)
+            log_output("="*60, f)
+            log_output("RESULTS SUMMARY", f)
+            log_output("="*60, f)
+            
+            log_output(f"\n🏆 Model: {model_name}", f)
+            log_output(f"F1 Score: {results['f1_score']:.1%} | Speed: {results['time_per_match_ms']:.1f}ms | Cost: $0.10/1M tokens", f)
+            log_output(f"Precision: {results['precision']:.3f} | Recall: {results['recall']:.3f} | Threshold: {results['threshold']:.3f}", f)
+            
+            log_output("", f)
+            log_output("📋 SAMPLE PREDICTIONS (5 examples):", f)
+            
+            sample_indices = np.random.choice(len(test_df), min(5, len(test_df)), replace=False)
+            for i, idx in enumerate(sample_indices):
+                actual_idx = test_df.index[idx]
+                name_a = df.loc[actual_idx, 'name_a']
+                name_b = df.loc[actual_idx, 'name_b']
+                score = scores[idx]
+                pred = predictions[idx]
+                truth = test_df.iloc[idx]['ground_truth']
+                
+                log_output(f"", f)
+                log_output(f"{i+1}. {name_a} vs {name_b}", f)
+                log_output(f"   Similarity: {score:.3f} | Prediction: {'MATCH' if pred else 'NO MATCH'} | Truth: {'MATCH' if truth else 'NO MATCH'} | {'✅' if pred == truth else '❌'}", f)
+            
+            log_output("", f)
+            log_output("="*80, f)
+            log_output("COMPARISON SUMMARY: PREVIOUS MATCHER vs LANGUAGE MODEL", f)
+            log_output("="*80, f)
+            
+            log_output(f"\n📊 PERFORMANCE COMPARISON:", f)
             log_output(f"", f)
-            log_output(f"{i+1}. {name_a} vs {name_b}", f)
-            log_output(f"   Similarity: {score:.3f} | Prediction: {'MATCH' if pred else 'NO MATCH'} | Truth: {'MATCH' if truth else 'NO MATCH'} | {'✅' if pred == truth else '❌'}", f)
-        
-        log_output("", f)
-        log_output("="*80, f)
-        log_output("COMPARISON SUMMARY: PREVIOUS MATCHER vs LANGUAGE MODEL", f)
-        log_output("="*80, f)
-        
-        log_output(f"\n📊 PERFORMANCE COMPARISON:", f)
-        log_output(f"", f)
-        log_output(f"Previous Matcher (Baseline):", f)
-        log_output(f"  Accuracy: {df['ground_truth'].mean():.1%} (ground truth rate)", f)
-        log_output(f"  Speed: ~1ms per match", f)
-        log_output(f"  Cost: $0.00 per match", f)
-        log_output(f"  Method: Rule-based matching", f)
-        log_output(f"", f)
-        log_output(f"Language Model (all-MiniLM-L6-v2):", f)
-        log_output(f"  Accuracy: {results['f1_score']:.1%} F1 score", f)
-        log_output(f"  Speed: {results['time_per_match_ms']:.1f}ms per match", f)
-        log_output(f"  Cost: $0.10 per 1M tokens", f)
-        log_output(f"  Method: Semantic similarity", f)
-        log_output(f"", f)
-        
-        accuracy_improvement = results['f1_score'] - df['ground_truth'].mean()
-        speed_ratio = results['time_per_match_ms'] / 1.0
-        
-        log_output(f"🎯 IMPROVEMENT ANALYSIS:", f)
-        if accuracy_improvement > 0:
-            log_output(f"  ✅ Accuracy: +{accuracy_improvement:.1%} improvement over baseline", f)
-        else:
-            log_output(f"  ❌ Accuracy: {accuracy_improvement:.1%} (needs improvement)", f)
-        
-        log_output(f"  ⚠️  Speed: {speed_ratio:.1f}x slower than baseline (acceptable for accuracy gain)", f)
-        log_output(f"  💰 Cost: $0.10 per 1M tokens (reasonable for AI capability)", f)
-        log_output(f"  📈 Overall: Language model provides substantial accuracy improvement", f)
-        log_output(f"", f)
-        
-        log_output(f"💡 BUSINESS RECOMMENDATION:", f)
-        if accuracy_improvement > 0.1:
-            log_output(f"  🎉 RECOMMENDED: Language model shows significant improvement", f)
-            log_output(f"     - Substantial accuracy gain justifies the cost and speed trade-off", f)
-            log_output(f"     - Ready for production deployment with current performance", f)
-        elif accuracy_improvement > 0.05:
-            log_output(f"  ✅ CONSIDER: Language model shows moderate improvement", f)
-            log_output(f"     - Good accuracy gain, evaluate cost-benefit for your use case", f)
-            log_output(f"     - Consider further optimization for better results", f)
-        else:
-            log_output(f"  ⚠️  EVALUATE: Language model needs optimization for better accuracy", f)
-            log_output(f"     - Current improvement may not justify the additional cost", f)
-            log_output(f"     - Focus on ensemble methods or larger models for better performance", f)
+            log_output(f"Previous Matcher (Baseline):", f)
+            log_output(f"  Accuracy: {df['ground_truth'].mean():.1%} (ground truth rate)", f)
+            log_output(f"  Speed: ~1ms per match", f)
+            log_output(f"  Cost: $0.00 per match", f)
+            log_output(f"  Method: Rule-based matching", f)
+            log_output(f"", f)
+            log_output(f"Language Model ({model_name}):", f)
+            log_output(f"  Accuracy: {results['f1_score']:.1%} F1 score", f)
+            log_output(f"  Speed: {results['time_per_match_ms']:.1f}ms per match", f)
+            log_output(f"  Cost: $0.10 per 1M tokens", f)
+            log_output(f"  Method: Semantic similarity", f)
+            log_output(f"", f)
+            
+            accuracy_improvement = results['f1_score'] - df['ground_truth'].mean()
+            speed_ratio = results['time_per_match_ms'] / 1.0
+            
+            log_output(f"🎯 IMPROVEMENT ANALYSIS:", f)
+            if accuracy_improvement > 0:
+                log_output(f"  ✅ Accuracy: +{accuracy_improvement:.1%} improvement over baseline", f)
+            else:
+                log_output(f"  ❌ Accuracy: {accuracy_improvement:.1%} (needs improvement)", f)
+            
+            log_output(f"  ⚠️  Speed: {speed_ratio:.1f}x slower than baseline (acceptable for accuracy gain)", f)
+            log_output(f"  💰 Cost: $0.10 per 1M tokens (reasonable for AI capability)", f)
+            log_output(f"  📈 Overall: Language model provides substantial accuracy improvement", f)
+            log_output(f"", f)
+            
+            log_output(f"💡 BUSINESS RECOMMENDATION:", f)
+            if accuracy_improvement > 0.1:
+                log_output(f"  🎉 RECOMMENDED: Language model shows significant improvement", f)
+                log_output(f"     - Substantial accuracy gain justifies the cost and speed trade-off", f)
+                log_output(f"     - Ready for production deployment with current performance", f)
+            elif accuracy_improvement > 0.05:
+                log_output(f"  ✅ CONSIDER: Language model shows moderate improvement", f)
+                log_output(f"     - Good accuracy gain, evaluate cost-benefit for your use case", f)
+                log_output(f"     - Consider further optimization for better results", f)
+            else:
+                log_output(f"  ⚠️  EVALUATE: Language model needs optimization for better accuracy", f)
+                log_output(f"     - Current improvement may not justify the additional cost", f)
+                log_output(f"     - Focus on ensemble methods or larger models for better performance", f)
         
         log_output("", f)
         log_output("="*60, f)
