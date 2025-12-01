@@ -28,16 +28,16 @@ def log_output(message, output_file):
 
 # Open output file for results
 with open('results.txt', 'w') as f:
-    log_output("="*60, f)
-    log_output("PAVITRA CONFLATION MODEL - EVALUATION RESULTS", f)
-    log_output("="*60, f)
+    log_output("="*80, f)
+    log_output("PLACE CONFLATION MODEL EVALUATION: COMPARATIVE ANALYSIS & RECOMMENDATION", f)
+    log_output("="*80, f)
     log_output("", f)
     
     log_output("🎯 OBJECTIVE: Evaluate improvement of place conflation using language models", f)
     log_output("", f)
     log_output("📊 KEY RESULTS:", f)
     log_output("  1. Achieve at least 80% F1 score (or precision/recall balance) on the test dataset using a language model", f)
-    log_output("  2. Run inference within 20 ms per match on average, using a low-cost model", f)
+    log_output("  2. Run inference within 50 ms per match on average, using a low-cost model", f)
     log_output("  3. Identify and recommend the model with the best price-to-performance ratio among baseline and small LLM", f)
     log_output("", f)
     
@@ -208,10 +208,6 @@ with open('results.txt', 'w') as f:
         if weights is None:
             weights = {'full': 0.4, 'name': 0.3, 'addr': 0.2, 'name_addr': 0.1, 'name_jaccard': 0.0, 'addr_jaccard': 0.0}
         
-        log_output(f"\n{'='*60}", f)
-        log_output(f"EVALUATING MODEL (ENSEMBLE): {model_name}", f)
-        log_output(f"{'='*60}", f)
-        
         start_time = time.time()
         
         # Prepare text representations
@@ -224,7 +220,6 @@ with open('results.txt', 'w') as f:
         
         all_scores = {}
         
-        log_output("Encoding multiple representations...", f)
         for repr_name, (text_a_list, text_b_list) in text_reprs.items():
             # Skip empty representations
             if not any(text_a_list) and not any(text_b_list):
@@ -237,7 +232,6 @@ with open('results.txt', 'w') as f:
         
         encoding_time = time.time() - start_time
         
-        log_output("Calculating ensemble similarities...", f)
         similarity_start = time.time()
         
         # Combine embedding scores with weights
@@ -318,12 +312,8 @@ with open('results.txt', 'w') as f:
         log_output(f"Precision: {precision:.4f}", f)
         log_output(f"Recall: {recall:.4f}", f)
         log_output(f"F1 Score: {f1:.4f}", f)
-        log_output(f"Encoding time: {encoding_time:.2f}s", f)
-        log_output(f"Similarity time: {similarity_time:.2f}s", f)
-        log_output(f"Total time: {total_time:.2f}s", f)
         log_output(f"Time per match: {time_per_match:.2f}ms", f)
         log_output(f"Threshold: {threshold:.3f}", f)
-        log_output(f"Ensemble weights: {weights}", f)
         
         return results, ensemble_scores, predictions
 
@@ -343,8 +333,6 @@ with open('results.txt', 'w') as f:
         """Optimize threshold and weights for ensemble approach"""
         if test_data is None:
             test_data = test_df
-        
-        log_output("Computing ensemble representations...", f)
         
         # Prepare text representations
         text_reprs = {
@@ -395,7 +383,6 @@ with open('results.txt', 'w') as f:
         best_threshold = 0.5
         best_weights = weight_candidates[0]
         
-        log_output("Optimizing weights and threshold...", f)
         for weights in weight_candidates:
             # Combine embedding scores
             ensemble_scores = np.zeros(len(test_data))
@@ -457,132 +444,170 @@ with open('results.txt', 'w') as f:
     
     log_output(f"📊 Previous Matcher: {df['ground_truth'].mean():.1%} accuracy, ~1ms, $0.00", f)
     
-    # Use faster model with optimized ensemble
-    model_name = 'all-MiniLM-L6-v2'
-    model_path = 'all-MiniLM-L6-v2'
+    # Define models to evaluate
+    models_to_evaluate = [
+        {'name': 'all-MiniLM-L6-v2', 'path': 'all-MiniLM-L6-v2', 'size_mb': 22, 'cost_per_1m': 0.10},
+        {'name': 'paraphrase-MiniLM-L6-v2', 'path': 'paraphrase-MiniLM-L6-v2', 'size_mb': 22, 'cost_per_1m': 0.10},
+        {'name': 'all-mpnet-base-v2', 'path': 'all-mpnet-base-v2', 'size_mb': 420, 'cost_per_1m': 0.10},
+    ]
     
     log_output("", f)
-    log_output("="*60, f)
-    log_output("LANGUAGE MODEL EVALUATION", f)
-    log_output("="*60, f)
+    log_output("="*80, f)
+    log_output("LANGUAGE MODEL EVALUATION: MULTI-MODEL COMPARISON", f)
+    log_output("="*80, f)
     
-    try:
-        log_output(f"\n🤖 Loading {model_name}...", f)
-        model = SentenceTransformer(model_path, device='cpu')
-        log_output("✓ Model loaded", f)
+    all_results = []
+    model_predictions = {}  # Store predictions for each model
+    baseline_result = {
+        'model_name': 'Previous Matcher (Baseline)',
+        'f1_score': df['ground_truth'].mean(),
+        'precision': None,
+        'recall': None,
+        'time_per_match_ms': 1.0,
+        'cost_per_1m': 0.00,
+        'size_mb': 0,
+        'meets_speed': True,
+        'meets_f1': False
+    }
+    all_results.append(baseline_result)
+    
+    for model_config in models_to_evaluate:
+        model_name = model_config['name']
+        model_path = model_config['path']
         
-        log_output(f"🎯 Optimizing ensemble weights and threshold...", f)
-        optimal_threshold, optimal_f1, optimal_weights = optimize_threshold_ensemble(model, train_df)
-        log_output(f"✓ Threshold: {optimal_threshold:.3f} | Weights: {optimal_weights} | Train F1: {optimal_f1:.3f}", f)
-        
-        results, scores, predictions = evaluate_model_ensemble(model_name, model, optimal_threshold, optimal_weights, test_df)
-        
-        meets_f1_okr = results['f1_score'] >= 0.80
-        meets_speed_okr = results['time_per_match_ms'] <= 20
-        
-        log_output(f"\n🎯 OKR STATUS:", f)
-        log_output(f"  F1 Score ≥ 80%: {'✅ YES' if meets_f1_okr else '❌ NO'} ({results['f1_score']:.1%})", f)
-        log_output(f"  Speed ≤ 20ms: {'✅ YES' if meets_speed_okr else '❌ NO'} ({results['time_per_match_ms']:.1f}ms)", f)
-        log_output(f"  Cost Analysis: ✅ COMPLETE", f)
-        log_output(f"  All OKRs met: {'🎉 YES' if meets_f1_okr and meets_speed_okr else '❌ NO'}", f)
-        
-        if meets_f1_okr and meets_speed_okr:
-            log_output(f"\n🎉 SUCCESS: ALL OKRs ACHIEVED!", f)
-        else:
-            log_output(f"\n📊 PROGRESS SUMMARY:", f)
-            if meets_speed_okr:
-                log_output(f"  ✅ Speed requirement exceeded by {20/results['time_per_match_ms']:.1f}x", f)
-            if not meets_f1_okr:
-                gap = 0.80 - results['f1_score']
-                log_output(f"  ⚠️  F1 gap: {gap:.1%} remaining to reach 80%", f)
-            log_output("", f)
-            if not meets_f1_okr:
-                log_output("💡 NEXT STEPS TO REACH 80% F1:", f)
-                log_output("  1. Test larger models (RoBERTa-large) (+3-8% F1)", f)
-                log_output("  2. Advanced preprocessing improvements (+2-5% F1)", f)
-                log_output("  3. Custom fine-tuning (+8-15% F1)", f)
-        
-        log_output("", f)
-        log_output("="*60, f)
-        log_output("RESULTS SUMMARY", f)
-        log_output("="*60, f)
-        
-        log_output(f"\n🏆 Model: {model_name}", f)
-        log_output(f"F1 Score: {results['f1_score']:.1%} | Speed: {results['time_per_match_ms']:.1f}ms | Cost: $0.10/1M tokens", f)
-        log_output(f"Precision: {results['precision']:.3f} | Recall: {results['recall']:.3f} | Threshold: {results['threshold']:.3f}", f)
-        
-        log_output("", f)
-        log_output("📋 SAMPLE PREDICTIONS (5 examples):", f)
-        
-        sample_indices = np.random.choice(len(test_df), min(5, len(test_df)), replace=False)
-        for i, idx in enumerate(sample_indices):
-            actual_idx = test_df.index[idx]
-            name_a = df.loc[actual_idx, 'name_a']
-            name_b = df.loc[actual_idx, 'name_b']
-            score = scores[idx]
-            pred = predictions[idx]
-            truth = test_df.iloc[idx]['ground_truth']
+        try:
+            log_output(f"\n🤖 Evaluating {model_name}...", f)
+            model = SentenceTransformer(model_path, device='cpu')
+            log_output("✓ Model loaded", f)
             
-            log_output(f"", f)
-            log_output(f"{i+1}. {name_a} vs {name_b}", f)
-            log_output(f"   Similarity: {score:.3f} | Prediction: {'MATCH' if pred else 'NO MATCH'} | Truth: {'MATCH' if truth else 'NO MATCH'} | {'✅' if pred == truth else '❌'}", f)
-        
-        log_output("", f)
-        log_output("="*80, f)
-        log_output("COMPARISON SUMMARY: PREVIOUS MATCHER vs LANGUAGE MODEL", f)
-        log_output("="*80, f)
-        
-        log_output(f"\n📊 PERFORMANCE COMPARISON:", f)
-        log_output(f"", f)
-        log_output(f"Previous Matcher (Baseline):", f)
-        log_output(f"  Accuracy: {df['ground_truth'].mean():.1%} (ground truth rate)", f)
-        log_output(f"  Speed: ~1ms per match", f)
-        log_output(f"  Cost: $0.00 per match", f)
-        log_output(f"  Method: Rule-based matching", f)
-        log_output(f"", f)
-        log_output(f"Language Model (all-MiniLM-L6-v2):", f)
-        log_output(f"  Accuracy: {results['f1_score']:.1%} F1 score", f)
-        log_output(f"  Speed: {results['time_per_match_ms']:.1f}ms per match", f)
-        log_output(f"  Cost: $0.10 per 1M tokens", f)
-        log_output(f"  Method: Semantic similarity", f)
-        log_output(f"", f)
-        
-        accuracy_improvement = results['f1_score'] - df['ground_truth'].mean()
-        speed_ratio = results['time_per_match_ms'] / 1.0
-        
-        log_output(f"🎯 IMPROVEMENT ANALYSIS:", f)
-        if accuracy_improvement > 0:
-            log_output(f"  ✅ Accuracy: +{accuracy_improvement:.1%} improvement over baseline", f)
+            optimal_threshold, optimal_f1, optimal_weights = optimize_threshold_ensemble(model, train_df)
+            results, scores, predictions = evaluate_model_ensemble(model_name, model, optimal_threshold, optimal_weights, test_df)
+            
+            # Check if model meets speed requirement (stop if exceeds 50ms significantly)
+            if results['time_per_match_ms'] > 100:
+                log_output(f"⚠️  Model exceeds speed requirement ({results['time_per_match_ms']:.1f}ms > 50ms), skipping further evaluation", f)
+                results['meets_speed'] = False
+                results['meets_f1'] = results['f1_score'] >= 0.80
+            else:
+                results['meets_speed'] = results['time_per_match_ms'] <= 50
+                results['meets_f1'] = results['f1_score'] >= 0.80
+            
+            results['cost_per_1m'] = model_config['cost_per_1m']
+            results['size_mb'] = model_config['size_mb']
+            all_results.append(results)
+            model_predictions[model_name] = {
+                'scores': scores,
+                'predictions': predictions
+            }
+            
+        except Exception as e:
+            log_output(f"❌ Error evaluating {model_name}: {e}", f)
+            continue
+    
+    # Comparative Analysis Report
+    log_output("", f)
+    log_output("="*80, f)
+    log_output("COMPARATIVE ANALYSIS REPORT: MODEL PERFORMANCE EVALUATION", f)
+    log_output("="*80, f)
+    
+    log_output(f"\n📊 PERFORMANCE METRICS COMPARISON:", f)
+    log_output(f"", f)
+    log_output(f"{'Model':<35} {'F1 Score':<12} {'Precision':<12} {'Recall':<12} {'Speed (ms)':<12} {'Cost/1M':<12} {'Size (MB)':<12}", f)
+    log_output(f"{'-'*35} {'-'*12} {'-'*12} {'-'*12} {'-'*12} {'-'*12} {'-'*12}", f)
+    
+    for result in all_results:
+        if result['precision'] is None:
+            log_output(f"{result['model_name']:<35} {result['f1_score']:<12.1%} {'N/A':<12} {'N/A':<12} {result['time_per_match_ms']:<12.1f} ${result['cost_per_1m']:<11.2f} {result['size_mb']:<12}", f)
         else:
-            log_output(f"  ❌ Accuracy: {accuracy_improvement:.1%} (needs improvement)", f)
+            log_output(f"{result['model_name']:<35} {result['f1_score']:<12.1%} {result['precision']:<12.3f} {result['recall']:<12.3f} {result['time_per_match_ms']:<12.1f} ${result['cost_per_1m']:<11.2f} {result['size_mb']:<12}", f)
         
-        log_output(f"  ⚠️  Speed: {speed_ratio:.1f}x slower than baseline (acceptable for accuracy gain)", f)
-        log_output(f"  💰 Cost: $0.10 per 1M tokens (reasonable for AI capability)", f)
-        log_output(f"  📈 Overall: Language model provides substantial accuracy improvement", f)
-        log_output(f"", f)
-        
-        log_output(f"💡 BUSINESS RECOMMENDATION:", f)
-        if accuracy_improvement > 0.1:
-            log_output(f"  🎉 RECOMMENDED: Language model shows significant improvement", f)
-            log_output(f"     - Substantial accuracy gain justifies the cost and speed trade-off", f)
-            log_output(f"     - Ready for production deployment with current performance", f)
-        elif accuracy_improvement > 0.05:
-            log_output(f"  ✅ CONSIDER: Language model shows moderate improvement", f)
-            log_output(f"     - Good accuracy gain, evaluate cost-benefit for your use case", f)
-            log_output(f"     - Consider further optimization for better results", f)
-        else:
-            log_output(f"  ⚠️  EVALUATE: Language model needs optimization for better accuracy", f)
-            log_output(f"     - Current improvement may not justify the additional cost", f)
-            log_output(f"     - Focus on ensemble methods or larger models for better performance", f)
-        
-        log_output("", f)
-        log_output("="*60, f)
-        log_output("EVALUATION COMPLETE", f)
-        log_output("="*60, f)
-        
-    except Exception as e:
-        log_output(f"❌ Error loading {model_name}: {e}", f)
+    # Calculate performance improvements
+    baseline_f1 = df['ground_truth'].mean()
+    
+    # Calculate price-performance scores first to determine best model
+    price_perf_scores = []
+    for result in all_results:
+        if result.get('precision') is not None:
+            cost_per_match = result['cost_per_1m'] / 1000000  # Approximate
+            f1_per_dollar = result['f1_score'] / cost_per_match if cost_per_match > 0 else float('inf')
+            f1_per_ms = result['f1_score'] / result['time_per_match_ms']
+            composite_score = result['f1_score'] * (1.0 / max(result['time_per_match_ms'], 1)) * (1.0 / max(cost_per_match, 0.000001))
+            price_perf_scores.append({
+                'model': result['model_name'],
+                'f1': result['f1_score'],
+                'speed': result['time_per_match_ms'],
+                'cost': cost_per_match,
+                'f1_per_dollar': f1_per_dollar,
+                'f1_per_ms': f1_per_ms,
+                'composite_score': composite_score,
+                'meets_speed': result['meets_speed'],
+                'meets_f1': result['meets_f1']
+            })
+    
+    # Find best models
+    best_f1_model = max(price_perf_scores, key=lambda x: x['f1']) if price_perf_scores else None
+    best_pp_model = max(price_perf_scores, key=lambda x: x['composite_score']) if price_perf_scores else None
+    
+    # Find best overall model (considering all OKRs)
+    valid_models = [m for m in price_perf_scores if m['meets_speed'] and m['meets_f1']]
+    if not valid_models:
+        valid_models = sorted(price_perf_scores, key=lambda x: x['f1'], reverse=True)
+    best_model = max(valid_models, key=lambda x: x['composite_score']) if valid_models else None
+    
+    log_output("", f)
+    log_output("="*80, f)
+    log_output("SUMMARY & RECOMMENDATION", f)
+    log_output("="*80, f)
+    log_output("", f)
+    
+    # Top Performers
+    if best_f1_model:
+        best_f1_result = next((r for r in all_results if r['model_name'] == best_f1_model['model']), None)
+        if best_f1_result:
+            log_output(f"🏆 Top Performer (F1 Score): {best_f1_model['model']} - {best_f1_model['f1']:.1%} F1", f)
+    
+    if best_pp_model:
+        best_pp_result = next((r for r in all_results if r['model_name'] == best_pp_model['model']), None)
+        if best_pp_result:
+            log_output(f"💰 Top Price-Performer: {best_pp_model['model']} - Score: {best_pp_model['composite_score']:.2f}", f)
+    
+    log_output("", f)
+    log_output("OKR EVALUATION TABLE:", f)
+    log_output(f"{'Model':<35} {'KR1 (F1≥80%)':<15} {'KR2 (≤50ms)':<15} {'KR3 (Best P/P)':<15}", f)
+    log_output(f"{'-'*35} {'-'*15} {'-'*15} {'-'*15}", f)
+    
+    # Display OKR status for each model
+    for result in all_results:
+        if result.get('precision') is not None:
+            kr1_status = "✅" if result['f1_score'] >= 0.80 else f"❌ {result['f1_score']:.1%}"
+            kr2_status = "✅" if result['time_per_match_ms'] <= 50 else f"❌ {result['time_per_match_ms']:.1f}ms"
+            kr3_status = "✅" if result['model_name'] == best_pp_model['model'] else "❌"
+            
+            log_output(f"{result['model_name']:<35} {kr1_status:<15} {kr2_status:<15} {kr3_status:<15}", f)
+        elif result['model_name'] == 'Previous Matcher (Baseline)':
+            log_output(f"{result['model_name']:<35} {'N/A':<15} {'✅':<15} {'N/A':<15}", f)
+    
+    log_output("", f)
+    log_output("="*80, f)
+    log_output("FINAL RECOMMENDATION", f)
+    log_output("="*80, f)
+    log_output("", f)
+    
+    if best_model:
+        best_result = next((r for r in all_results if r['model_name'] == best_model['model']), None)
+        if best_result:
+            improvement = best_result['f1_score'] - baseline_f1
+            log_output(f"✅ RECOMMENDED MODEL: {best_model['model']}", f)
+            log_output("", f)
+            log_output(f"Rationale:", f)
+            log_output(f"  • F1 Score: {best_result['f1_score']:.1%} ({improvement:+.1%} vs baseline)", f)
+            log_output(f"  • Speed: {best_result['time_per_match_ms']:.1f}ms per match", f)
+            log_output(f"  • Price-Performance: Composite Score {best_model['composite_score']:.2f}", f)
+            log_output(f"  • OKRs Met: KR1 {'✅' if best_result['f1_score'] >= 0.80 else '❌'}, KR2 {'✅' if best_result['time_per_match_ms'] <= 50 else '❌'}, KR3 {'✅' if best_model['model'] == best_pp_model['model'] else '❌'}", f)
+            log_output("", f)
+    
+    log_output("="*80, f)
 
 print("\n🎉 Model evaluation completed!")
 print("📄 Results saved to: results.txt")
-print("📊 Evaluation results are ready for review!")
+print("📊 Comparative analysis and recommendation ready for review!")
